@@ -49,16 +49,15 @@ class OSS_bdstool_helper:
             bdstool_cmd = COMMAND_STR % (self.conf_dict[c_project_id], c_project_id)
             print(bdstool_cmd)
             process = subprocess.Popen(bdstool_cmd, stdout=subprocess.PIPE, shell=True)
+            #process = subprocess.Popen(bdstool_cmd, shell=True)
             t_str = process.communicate()[0].strip()
-            f.write(t_str.decode('utf-8'))
+            f.write(t_str.decode('cp949'))
             f.flush()
 
         f.close()
 
-
 def printUsage():
     print("OSS_bdstool_helper.py [csv file]")
-
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
