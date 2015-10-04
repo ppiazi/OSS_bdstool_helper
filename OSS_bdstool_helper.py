@@ -3,13 +3,10 @@ import os
 import sys
 import subprocess
 import csv
+import datetime
 
-COMMAND_STR="""
-cd %s &
-call bdstool new-project %s --verbose &
-call bdstool analyze --force –-verbose &
-call bdstool upload
-"""
+#COMMAND_STR="""rem %s & pushd %s & pwd & popd & pwd"""
+COMMAND_STR="""pushd %s & call bdstool new-project %s & call bdstool analyze --all-files --verbose & call bdstool upload & popd"""
 
 class OSS_bdstool_helper:
     def __init__(self, worker_number):
@@ -22,6 +19,7 @@ class OSS_bdstool_helper:
         :param file_name:
         :return: error_code
         """
+        self.file_name = file_name
         try:
             csv_file = open(file_name, "r", encoding='UTF8')
         except:
@@ -42,33 +40,34 @@ class OSS_bdstool_helper:
         if len(self.conf_dict) == 0:
             return -1
         
+        f = open(self.file_name + ".log", "w")
+
         for c_project_id in self.conf_dict.keys():
-            print("Start to analyze %s at %s" % (c_project_id, self.conf_dict[c_project_id]))
-            bdstool_cmd = COMMAND_STR % (c_project_id, self.conf_dict[c_project_id])
+            t_str = "(%s) Start to analyze %s at %s" % (datetime.datetime.now().ctime(), c_project_id, self.conf_dict[c_project_id])
+            print(t_str)
+            f.write(t_str)
+            bdstool_cmd = COMMAND_STR % (self.conf_dict[c_project_id], c_project_id)
+            print(bdstool_cmd)
             process = subprocess.Popen(bdstool_cmd, stdout=subprocess.PIPE, shell=True)
-            proc_stdout = process.communicate()[0].strip()
-            print(proc_stdout)
-            process.close()
+            t_str = process.communicate()[0].strip()
+            f.write(t_str.decode('utf-8'))
+            f.flush()
+
+        f.close()
 
 
 def printUsage():
-    print("OSS_bdstool_helper.py [csv file] [the number of simultaneous workers, Maximum 4]")
+    print("OSS_bdstool_helper.py [csv file]")
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 2:
         printUsage()
         os._exit(1)
 
     conf_file = sys.argv[1]
-    try:
-        t = int(sys.argv[2])
-    except:
-        t = 1
-    if t > 4:
-        t = 4
 
-    nWorker = t
+    nWorker = 1
     worker = OSS_bdstool_helper(nWorker)
 
     worker.loadConf(conf_file)
