@@ -4,14 +4,17 @@ import sys
 import subprocess
 import csv
 import datetime
+import logging
+import logging.handlers
 
-#COMMAND_STR="""rem %s & pushd %s & pwd & popd & pwd"""
+# Windows Shell Command to analyze with bdstool. Take 2 arguments(project path & project id)
 COMMAND_STR="""pushd %s & call bdstool new-project %s & call bdstool analyze --all-files --verbose & call bdstool upload & popd"""
 
 class OSS_bdstool_helper:
     def __init__(self, worker_number):
         self.conf_dict = {}
         self.max_worker = worker_number
+        self.logger = logging.getLogger("OSS_bdstool_helper")
 
     def loadConf(self, file_name):
         """
@@ -20,6 +23,14 @@ class OSS_bdstool_helper:
         :return: error_code
         """
         self.file_name = file_name
+        self.file_logger = logging.FileHandler(filename=self.file_name + ".log")
+        self.stdout_logger = logging.StreamHandler()
+
+        self.logger.addHandler(self.file_logger)
+        self.logger.addHandler(self.stdout_logger)
+
+        self.logger.setLevel(logging.DEBUG)
+
         try:
             csv_file = open(file_name, "r", encoding='UTF8')
         except:
@@ -40,21 +51,13 @@ class OSS_bdstool_helper:
         if len(self.conf_dict) == 0:
             return -1
         
-        f = open(self.file_name + ".log", "w")
-
         for c_project_id in self.conf_dict.keys():
-            t_str = "(%s) Start to analyze %s at %s" % (datetime.datetime.now().ctime(), c_project_id, self.conf_dict[c_project_id])
-            print(t_str)
-            f.write(t_str)
+            self.logger.info("(%s) Start to analyze %s at %s" % (datetime.datetime.now().ctime(), c_project_id, self.conf_dict[c_project_id]))
             bdstool_cmd = COMMAND_STR % (self.conf_dict[c_project_id], c_project_id)
-            print(bdstool_cmd)
+            self.logger.info(bdstool_cmd)
             process = subprocess.Popen(bdstool_cmd, stdout=subprocess.PIPE, shell=True)
-            #process = subprocess.Popen(bdstool_cmd, shell=True)
             t_str = process.communicate()[0].strip()
-            f.write(t_str.decode('cp949'))
-            f.flush()
-
-        f.close()
+            self.logger.info(t_str.decode('cp949'))
 
 def printUsage():
     print("OSS_bdstool_helper.py [csv file]")
